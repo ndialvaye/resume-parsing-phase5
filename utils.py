@@ -1,57 +1,44 @@
-import re
-import docx
 import spacy
+import subprocess
+import sys
 import pandas as pd
-from PyPDF2 import PdfReader
+import re
 from io import BytesIO
+import docx2txt
+from PyPDF2 import PdfReader
 
-nlp = spacy.load("en_core_web_sm")
+# Charger SpaCy avec gestion de l'absence de modèle
+try:
+    nlp = spacy.load("en_core_web_sm")
+except OSError:
+    subprocess.run([sys.executable, "-m", "spacy", "download", "en_core_web_sm"])
+    nlp = spacy.load("en_core_web_sm")
 
-def extract_text_from_pdf(content):
-    reader = PdfReader(BytesIO(content))
-    return "\n".join([page.extract_text() for page in reader.pages if page.extract_text()])
+def extract_text_from_file(file):
+    if file.name.endswith(".pdf"):
+        reader = PdfReader(file)
+        text = "".join([page.extract_text() or "" for page in reader.pages])
+    elif file.name.endswith(".docx"):
+        text = docx2txt.process(file)
+    else:
+        text = ""
+    return text
 
-def extract_text_from_docx(content):
-    document = docx.Document(BytesIO(content))
-    return "\n".join([para.text for para in document.paragraphs])
-
-def extract_resume_data(filename, content):
-    text = ""
-    if filename.endswith(".pdf"):
-        text = extract_text_from_pdf(content)
-    elif filename.endswith(".docx"):
-        text = extract_text_from_docx(content)
-
+def extract_resume_data(file):
+    text = extract_text_from_file(file)
     doc = nlp(text)
-
-    name = ""
-    email = ""
-    phone = ""
-    skills = []
-    experiences = []
-    education = []
-
+    name = email = phone = ""
     for ent in doc.ents:
         if ent.label_ == "PERSON" and not name:
             name = ent.text
-        elif ent.label_ == "ORG":
-            education.append(ent.text)
+        if ent.label_ == "EMAIL" or re.search(r"[\w.+-]+@[\w-]+\.[\w.-]+", ent.text):
+            email = ent.text
+        if not phone and re.search(r"(\+?\d{1,3})?[\s.-]?\(?\d{2,4}\)?[\s.-]?\d{3,4}[\s.-]?\d{3,4}", ent.text):
+            phone = ent.text
+    return {"Nom": name, "Email": email, "Téléphone": phone}
 
-    email_match = re.search(r'\b[\w\.-]+@[\w\.-]+\.\w+\b', text)
-    phone_match = re.search(r'\b(?:\+?\d{1,3}[\s.-]?)?(?:\(?\d{2,4}\)?[\s.-]?)?\d{3,4}[\s.-]?\d{4}\b', text)
-
-    if email_match:
-        email = email_match.group()
-    if phone_match:
-        phone = phone_match.group()
-
-    return {
-        "Nom": name,
-        "Email": email,
-        "Téléphone": phone,
-        "Éducation": ", ".join(set(education))
-    }
-
-def save_data_to_excel(data, path):
+def save_data_to_excel(data):
     df = pd.DataFrame(data)
-    df.to_excel(path, index=False)
+    output_path = "parsed_resumes.xls"
+    df.to_excel(output_path, index=False)
+    return output_path

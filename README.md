@@ -1,16 +1,3 @@
-# Phase 5 - Résumé Parsing
+# Phase 5 - Resume Parsing: Structuration et Analyse
 
-Ce projet permet d'extraire automatiquement les données de CV (PDF ou DOCX) et de générer un fichier Excel structuré (.xlsx) contenant les informations suivantes :
-
-- Nom
-- Email
-- Téléphone
-- Éducation
-
-L'application est construite avec **Streamlit** et déployée sur **Streamlit Cloud**.
-
-## Exécution locale
-```bash
-pip install -r requirements.txt
-streamlit run app.py
-```
+Cette application Streamlit permet d'extraire les données de CVs, de les structurer et de générer un fichier `.xls` utilisable pour de l'analyse ou de l'entraînement de modèles de machine learning.
