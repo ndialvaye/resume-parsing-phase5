@@ -1,39 +1,30 @@
 import streamlit as st
 import pandas as pd
-from utils import parse_pdf, parse_docx, extract_resume_data
-from io import BytesIO
+from utils import extract_resume_data, parse_pdf, parse_docx
+from pathlib import Path
 
-st.title("Phase 5 : Génération de base de données structurée à partir des CVs")
+st.title("Phase 5 - Structuration et Analyse des CVs")
 
-uploaded_files = st.file_uploader("Téléversez un ou plusieurs CV (PDF ou DOCX)", type=["pdf", "docx"], accept_multiple_files=True)
+uploaded_files = st.file_uploader("Téléverser des fichiers .pdf ou .docx", type=["pdf", "docx"], accept_multiple_files=True)
 
 if uploaded_files:
-    resume_data_list = []
+    all_data = []
     for file in uploaded_files:
-        if file.name.endswith(".pdf"):
+        file_extension = Path(file.name).suffix.lower()
+        if file_extension == ".pdf":
             text = parse_pdf(file)
-        elif file.name.endswith(".docx"):
+        elif file_extension == ".docx":
             text = parse_docx(file)
         else:
-            st.warning(f"Format non pris en charge : {file.name}")
+            st.warning(f"Format non supporté : {file.name}")
             continue
 
         data = extract_resume_data(text)
-        resume_data_list.append(data)
+        data["filename"] = file.name
+        all_data.append(data)
 
-    if resume_data_list:
-        df = pd.DataFrame(resume_data_list)
+    df = pd.DataFrame(all_data)
+    st.dataframe(df)
 
-        output = BytesIO()
-        with pd.ExcelWriter(output, engine='xlsxwriter') as writer:
-            df.to_excel(writer, index=False, sheet_name='Résumés')
-            writer.save()
-        output.seek(0)
-
-        st.success("Extraction terminée. Vous pouvez télécharger le fichier Excel structuré.")
-        st.download_button(
-            label="📥 Télécharger le fichier .xlsx",
-            data=output,
-            file_name="parsed_resumes.xlsx",
-            mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-        )
+    csv = df.to_csv(index=False).encode("utf-8")
+    st.download_button("Télécharger les données en CSV", data=csv, file_name="parsed_resumes.csv", mime="text/csv")

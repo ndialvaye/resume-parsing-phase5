@@ -1,3 +1,3 @@
-# Phase 5 - Résumé Parsing vers Base de Données Structurée
+# Phase 5 - Structuration des Données de CV
 
-Cette application Streamlit permet de téléverser des CVs au format PDF ou DOCX, d'en extraire les informations clés, et de les exporter dans un fichier Excel structuré.
+Cette application Streamlit extrait les données structurées à partir de fichiers PDF et DOCX de CVs, et génère un fichier CSV avec les champs suivants : nom, email, téléphone, compétences, expérience, formation.
