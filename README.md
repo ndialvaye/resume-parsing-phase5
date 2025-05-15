@@ -1,3 +1,16 @@
-# Phase 5 - Structuration des Données de CV
+# Phase 5 - Résumé Parsing
 
-Cette application Streamlit extrait les données structurées à partir de fichiers PDF et DOCX de CVs, et génère un fichier CSV avec les champs suivants : nom, email, téléphone, compétences, expérience, formation.
+Ce projet permet d'extraire automatiquement les données de CV (PDF ou DOCX) et de générer un fichier Excel structuré (.xlsx) contenant les informations suivantes :
+
+- Nom
+- Email
+- Téléphone
+- Éducation
+
+L'application est construite avec **Streamlit** et déployée sur **Streamlit Cloud**.
+
+## Exécution locale
+```bash
+pip install -r requirements.txt
+streamlit run app.py
+```

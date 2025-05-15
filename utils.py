@@ -1,52 +1,57 @@
 import re
-import docx2txt
-import fitz  # PyMuPDF
+import docx
+import spacy
+import pandas as pd
+from PyPDF2 import PdfReader
+from io import BytesIO
 
-def parse_pdf(file) -> str:
-    doc = fitz.open(stream=file.read(), filetype="pdf")
+nlp = spacy.load("en_core_web_sm")
+
+def extract_text_from_pdf(content):
+    reader = PdfReader(BytesIO(content))
+    return "\n".join([page.extract_text() for page in reader.pages if page.extract_text()])
+
+def extract_text_from_docx(content):
+    document = docx.Document(BytesIO(content))
+    return "\n".join([para.text for para in document.paragraphs])
+
+def extract_resume_data(filename, content):
     text = ""
-    for page in doc:
-        text += page.get_text()
-    return text
+    if filename.endswith(".pdf"):
+        text = extract_text_from_pdf(content)
+    elif filename.endswith(".docx"):
+        text = extract_text_from_docx(content)
 
-def parse_docx(file) -> str:
-    return docx2txt.process(file)
+    doc = nlp(text)
 
-def extract_resume_data(text: str) -> dict:
-    data = {
-        "name": extract_name(text),
-        "email": extract_email(text),
-        "phone": extract_phone(text),
-        "skills": extract_skills(text),
-        "experience": extract_experience(text),
-        "education": extract_education(text),
+    name = ""
+    email = ""
+    phone = ""
+    skills = []
+    experiences = []
+    education = []
+
+    for ent in doc.ents:
+        if ent.label_ == "PERSON" and not name:
+            name = ent.text
+        elif ent.label_ == "ORG":
+            education.append(ent.text)
+
+    email_match = re.search(r'\b[\w\.-]+@[\w\.-]+\.\w+\b', text)
+    phone_match = re.search(r'\b(?:\+?\d{1,3}[\s.-]?)?(?:\(?\d{2,4}\)?[\s.-]?)?\d{3,4}[\s.-]?\d{4}\b', text)
+
+    if email_match:
+        email = email_match.group()
+    if phone_match:
+        phone = phone_match.group()
+
+    return {
+        "Nom": name,
+        "Email": email,
+        "Téléphone": phone,
+        "Éducation": ", ".join(set(education))
     }
-    return data
 
-def extract_email(text: str) -> str:
-    match = re.search(r"[\w\.-]+@[\w\.-]+", text)
-    return match.group(0) if match else ""
-
-def extract_phone(text: str) -> str:
-    match = re.search(r"\+?\d[\d\s().-]{8,}\d", text)
-    return match.group(0) if match else ""
-
-def extract_name(text: str) -> str:
-    lines = text.split("\n")
-    for line in lines[:5]:
-        if len(line.strip().split()) in [2, 3] and line[0].isupper():
-            return line.strip()
-    return ""
-
-def extract_skills(text: str) -> str:
-    skills_keywords = ["Python", "SQL", "Excel", "Java", "C++", "Machine Learning", "Data Analysis"]
-    found = [skill for skill in skills_keywords if re.search(rf"\b{skill}\b", text, re.IGNORECASE)]
-    return ", ".join(found)
-
-def extract_experience(text: str) -> str:
-    experience_section = re.search(r"(?i)(experience|expériences).+?(education|formation|skills|compétences)", text, re.DOTALL)
-    return experience_section.group(0).strip() if experience_section else ""
-
-def extract_education(text: str) -> str:
-    education_section = re.search(r"(?i)(education|formation).+?(experience|expérience|skills|compétences)", text, re.DOTALL)
-    return education_section.group(0).strip() if education_section else ""
+def save_data_to_excel(data, path):
+    df = pd.DataFrame(data)
+    df.to_excel(path, index=False)
