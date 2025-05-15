@@ -1,3 +1,3 @@
-# Phase 5 - Resume Parsing: Structuration et Analyse
+# Phase 5: Resume Parsing to Structured Excel
 
-Cette application Streamlit permet d'extraire les données de CVs, de les structurer et de générer un fichier `.xls` utilisable pour de l'analyse ou de l'entraînement de modèles de machine learning.
+This Streamlit app parses PDF and DOCX resumes, extracts key information, and generates a structured Excel (.xlsx) file.

@@ -1,44 +1,57 @@
 import spacy
-import subprocess
-import sys
 import pandas as pd
-import re
-from io import BytesIO
-import docx2txt
+import docx
+import io
 from PyPDF2 import PdfReader
 
-# Charger SpaCy avec gestion de l'absence de modèle
-try:
-    nlp = spacy.load("en_core_web_sm")
-except OSError:
-    subprocess.run([sys.executable, "-m", "spacy", "download", "en_core_web_sm"])
-    nlp = spacy.load("en_core_web_sm")
+nlp = spacy.load("en_core_web_sm")
 
-def extract_text_from_file(file):
-    if file.name.endswith(".pdf"):
-        reader = PdfReader(file)
-        text = "".join([page.extract_text() or "" for page in reader.pages])
-    elif file.name.endswith(".docx"):
-        text = docx2txt.process(file)
-    else:
-        text = ""
+def extract_text_from_pdf(file_data):
+    reader = PdfReader(io.BytesIO(file_data))
+    text = ""
+    for page in reader.pages:
+        text += page.extract_text() or ""
     return text
 
-def extract_resume_data(file):
-    text = extract_text_from_file(file)
+def extract_text_from_docx(file_data):
+    doc = docx.Document(io.BytesIO(file_data))
+    return "\n".join([para.text for para in doc.paragraphs])
+
+def extract_resume_data(file_data, filename):
+    text = ""
+    if filename.endswith(".pdf"):
+        text = extract_text_from_pdf(file_data)
+    elif filename.endswith(".docx"):
+        text = extract_text_from_docx(file_data)
+    else:
+        return {"Filename": filename, "Name": "", "Email": "", "Phone": "", "Skills": ""}
+
     doc = nlp(text)
-    name = email = phone = ""
+    name = ""
+    email = ""
+    phone = ""
+    skills = []
+
     for ent in doc.ents:
         if ent.label_ == "PERSON" and not name:
             name = ent.text
-        if ent.label_ == "EMAIL" or re.search(r"[\w.+-]+@[\w-]+\.[\w.-]+", ent.text):
+        elif ent.label_ == "EMAIL" and not email:
             email = ent.text
-        if not phone and re.search(r"(\+?\d{1,3})?[\s.-]?\(?\d{2,4}\)?[\s.-]?\d{3,4}[\s.-]?\d{3,4}", ent.text):
+        elif ent.label_ == "PHONE" and not phone:
             phone = ent.text
-    return {"Nom": name, "Email": email, "Téléphone": phone}
 
-def save_data_to_excel(data):
-    df = pd.DataFrame(data)
-    output_path = "parsed_resumes.xls"
-    df.to_excel(output_path, index=False)
-    return output_path
+    for token in doc:
+        if token.pos_ == "NOUN" and token.text.lower() not in skills:
+            skills.append(token.text.lower())
+
+    return {
+        "Filename": filename,
+        "Name": name,
+        "Email": email,
+        "Phone": phone,
+        "Skills": ", ".join(skills)
+    }
+
+def save_data_to_excel(data_list, filename):
+    df = pd.DataFrame(data_list)
+    df.to_excel(filename, index=False)
