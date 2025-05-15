@@ -1,3 +1,3 @@
-# Phase 5: Resume Data Structuring
+# Phase 5 - Structuration des Données de CV
 
-This Streamlit app processes uploaded PDF and DOCX resumes, extracts structured information (name, email, phone, skills, experience, education), and exports it to a CSV file.
+Cette application Streamlit extrait les données structurées à partir de fichiers PDF et DOCX de CVs, et génère un fichier CSV avec les champs suivants : nom, email, téléphone, compétences, expérience, formation.

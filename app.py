@@ -1,21 +1,30 @@
 import streamlit as st
 import pandas as pd
-from utils import extract_info_from_text, convert_pdf_or_docx_to_text
+from utils import extract_resume_data, parse_pdf, parse_docx
+from pathlib import Path
 
-st.title("Phase 5: Resume Data Structuring and Analysis")
+st.title("Phase 5 - Structuration et Analyse des CVs")
 
-uploaded_files = st.file_uploader("Upload PDF or DOCX resumes", accept_multiple_files=True, type=["pdf", "docx"])
+uploaded_files = st.file_uploader("Téléverser des fichiers .pdf ou .docx", type=["pdf", "docx"], accept_multiple_files=True)
 
 if uploaded_files:
     all_data = []
-    for uploaded_file in uploaded_files:
-        text = convert_pdf_or_docx_to_text(uploaded_file)
-        data = extract_info_from_text(text)
+    for file in uploaded_files:
+        file_extension = Path(file.name).suffix.lower()
+        if file_extension == ".pdf":
+            text = parse_pdf(file)
+        elif file_extension == ".docx":
+            text = parse_docx(file)
+        else:
+            st.warning(f"Format non supporté : {file.name}")
+            continue
+
+        data = extract_resume_data(text)
+        data["filename"] = file.name
         all_data.append(data)
 
     df = pd.DataFrame(all_data)
     st.dataframe(df)
 
-    # Download as CSV
-    csv = df.to_csv(index=False)
-    st.download_button("Download CSV", csv, "parsed_resumes.csv", "text/csv")
+    csv = df.to_csv(index=False).encode("utf-8")
+    st.download_button("Télécharger les données en CSV", data=csv, file_name="parsed_resumes.csv", mime="text/csv")
