@@ -1,9 +1,3 @@
-# Phase 5 - Base de données structurée
+# Phase 5: Resume Data Structuring
 
-Cette application Streamlit permet d'extraire des informations de CV en PDF, de les stocker dans une base SQLite et de les visualiser.
-
-## Fonctionnalités
-
-- Extraction de nom, e-mail, téléphone, compétences
-- Insertion automatique dans base `resumes.db`
-- Affichage du contenu de la base
+This Streamlit app processes uploaded PDF and DOCX resumes, extracts structured information (name, email, phone, skills, experience, education), and exports it to a CSV file.

@@ -1,31 +1,21 @@
 import streamlit as st
-from utils import parse_pdf_resume, insert_into_db, init_db
-import sqlite3
-import os
 import pandas as pd
+from utils import extract_info_from_text, convert_pdf_or_docx_to_text
 
-st.title("Phase 5 : Base de données structurée à partir de CVs")
+st.title("Phase 5: Resume Data Structuring and Analysis")
 
-st.markdown("Téléversez un fichier PDF de CV pour extraction et insertion en base de données.")
+uploaded_files = st.file_uploader("Upload PDF or DOCX resumes", accept_multiple_files=True, type=["pdf", "docx"])
 
-uploaded_file = st.file_uploader("Téléverser un CV (format PDF uniquement)", type=["pdf"])
+if uploaded_files:
+    all_data = []
+    for uploaded_file in uploaded_files:
+        text = convert_pdf_or_docx_to_text(uploaded_file)
+        data = extract_info_from_text(text)
+        all_data.append(data)
 
-if uploaded_file is not None:
-    with open("temp_resume.pdf", "wb") as f:
-        f.write(uploaded_file.getbuffer())
+    df = pd.DataFrame(all_data)
+    st.dataframe(df)
 
-    st.success("Fichier reçu. Extraction en cours...")
-
-    extracted_data = parse_pdf_resume("temp_resume.pdf")
-    st.write("Résultat de l'extraction :", extracted_data)
-
-    init_db()
-    insert_into_db(extracted_data)
-
-    st.success("Données insérées dans la base de données.")
-
-    if st.button("Afficher toutes les données enregistrées"):
-        conn = sqlite3.connect("resumes.db")
-        df = pd.read_sql_query("SELECT * FROM resumes", conn)
-        st.dataframe(df)
-        conn.close()
+    # Download as CSV
+    csv = df.to_csv(index=False)
+    st.download_button("Download CSV", csv, "parsed_resumes.csv", "text/csv")
