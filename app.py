@@ -1,30 +1,39 @@
 import streamlit as st
 import pandas as pd
-from utils import extract_resume_data, parse_pdf, parse_docx
-from pathlib import Path
+from utils import parse_pdf, parse_docx, extract_resume_data
+from io import BytesIO
 
-st.title("Phase 5 - Structuration et Analyse des CVs")
+st.title("Phase 5 : Génération de base de données structurée à partir des CVs")
 
-uploaded_files = st.file_uploader("Téléverser des fichiers .pdf ou .docx", type=["pdf", "docx"], accept_multiple_files=True)
+uploaded_files = st.file_uploader("Téléversez un ou plusieurs CV (PDF ou DOCX)", type=["pdf", "docx"], accept_multiple_files=True)
 
 if uploaded_files:
-    all_data = []
+    resume_data_list = []
     for file in uploaded_files:
-        file_extension = Path(file.name).suffix.lower()
-        if file_extension == ".pdf":
+        if file.name.endswith(".pdf"):
             text = parse_pdf(file)
-        elif file_extension == ".docx":
+        elif file.name.endswith(".docx"):
             text = parse_docx(file)
         else:
-            st.warning(f"Format non supporté : {file.name}")
+            st.warning(f"Format non pris en charge : {file.name}")
             continue
 
         data = extract_resume_data(text)
-        data["filename"] = file.name
-        all_data.append(data)
+        resume_data_list.append(data)
 
-    df = pd.DataFrame(all_data)
-    st.dataframe(df)
+    if resume_data_list:
+        df = pd.DataFrame(resume_data_list)
 
-    csv = df.to_csv(index=False).encode("utf-8")
-    st.download_button("Télécharger les données en CSV", data=csv, file_name="parsed_resumes.csv", mime="text/csv")
+        output = BytesIO()
+        with pd.ExcelWriter(output, engine='xlsxwriter') as writer:
+            df.to_excel(writer, index=False, sheet_name='Résumés')
+            writer.save()
+        output.seek(0)
+
+        st.success("Extraction terminée. Vous pouvez télécharger le fichier Excel structuré.")
+        st.download_button(
+            label="📥 Télécharger le fichier .xlsx",
+            data=output,
+            file_name="parsed_resumes.xlsx",
+            mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+        )

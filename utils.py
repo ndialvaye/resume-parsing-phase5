@@ -1,52 +1,57 @@
-import re
-import docx2txt
 import fitz  # PyMuPDF
+import docx2txt
+import re
 
-def parse_pdf(file) -> str:
-    doc = fitz.open(stream=file.read(), filetype="pdf")
+def parse_pdf(file):
     text = ""
-    for page in doc:
-        text += page.get_text()
+    with fitz.open(stream=file.read(), filetype="pdf") as doc:
+        for page in doc:
+            text += page.get_text()
     return text
 
-def parse_docx(file) -> str:
+def parse_docx(file):
     return docx2txt.process(file)
 
-def extract_resume_data(text: str) -> dict:
-    data = {
-        "name": extract_name(text),
-        "email": extract_email(text),
-        "phone": extract_phone(text),
-        "skills": extract_skills(text),
-        "experience": extract_experience(text),
-        "education": extract_education(text),
+def extract_resume_data(text):
+    name = extract_name(text)
+    email = extract_email(text)
+    phone = extract_phone(text)
+    skills = extract_skills(text)
+    education = extract_education(text)
+    experience = extract_experience(text)
+    return {
+        "Name": name,
+        "Email": email,
+        "Phone": phone,
+        "Skills": skills,
+        "Education": education,
+        "Experience": experience
     }
-    return data
 
-def extract_email(text: str) -> str:
+def extract_name(text):
+    lines = text.strip().split('
+')
+    return lines[0] if lines else ""
+
+def extract_email(text):
     match = re.search(r"[\w\.-]+@[\w\.-]+", text)
     return match.group(0) if match else ""
 
-def extract_phone(text: str) -> str:
-    match = re.search(r"\+?\d[\d\s().-]{8,}\d", text)
+def extract_phone(text):
+    match = re.search(r"(\+?\d{1,3})?[\s.-]?(\d{2}[\s.-]?){4,5}", text)
     return match.group(0) if match else ""
 
-def extract_name(text: str) -> str:
-    lines = text.split("\n")
-    for line in lines[:5]:
-        if len(line.strip().split()) in [2, 3] and line[0].isupper():
-            return line.strip()
-    return ""
-
-def extract_skills(text: str) -> str:
-    skills_keywords = ["Python", "SQL", "Excel", "Java", "C++", "Machine Learning", "Data Analysis"]
-    found = [skill for skill in skills_keywords if re.search(rf"\b{skill}\b", text, re.IGNORECASE)]
+def extract_skills(text):
+    keywords = ["Python", "SQL", "Excel", "Data", "Machine Learning", "Communication"]
+    found = [kw for kw in keywords if kw.lower() in text.lower()]
     return ", ".join(found)
 
-def extract_experience(text: str) -> str:
-    experience_section = re.search(r"(?i)(experience|expériences).+?(education|formation|skills|compétences)", text, re.DOTALL)
-    return experience_section.group(0).strip() if experience_section else ""
+def extract_education(text):
+    education_keywords = ["Bac", "Licence", "Master", "Doctorat", "École", "Université"]
+    found = [line for line in text.split('\n') if any(word in line for word in education_keywords)]
+    return "; ".join(found)
 
-def extract_education(text: str) -> str:
-    education_section = re.search(r"(?i)(education|formation).+?(experience|expérience|skills|compétences)", text, re.DOTALL)
-    return education_section.group(0).strip() if education_section else ""
+def extract_experience(text):
+    experience_keywords = ["stage", "expérience", "travail", "CDD", "CDI", "freelance"]
+    found = [line for line in text.split('\n') if any(word in line.lower() for word in experience_keywords)]
+    return "; ".join(found)
