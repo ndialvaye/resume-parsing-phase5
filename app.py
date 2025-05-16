@@ -1,20 +1,30 @@
 import streamlit as st
-from utils import extract_resume_data, save_data_to_excel
+import pandas as pd
+from utils import extract_resume_data, parse_pdf, parse_docx
+from pathlib import Path
 
-st.title("Phase 5: Structured Resume Data to Excel")
+st.title("Phase 5 - Structuration et Analyse des CVs")
 
-uploaded_files = st.file_uploader("Upload resumes (PDF or DOCX)", accept_multiple_files=True, type=['pdf', 'docx'])
+uploaded_files = st.file_uploader("Téléverser des fichiers .pdf ou .docx", type=["pdf", "docx"], accept_multiple_files=True)
 
 if uploaded_files:
     all_data = []
-    for uploaded_file in uploaded_files:
-        file_data = uploaded_file.read()
-        filename = uploaded_file.name
-        st.success(f"Parsing: {filename}")
-        resume_data = extract_resume_data(file_data, filename)
-        all_data.append(resume_data)
+    for file in uploaded_files:
+        file_extension = Path(file.name).suffix.lower()
+        if file_extension == ".pdf":
+            text = parse_pdf(file)
+        elif file_extension == ".docx":
+            text = parse_docx(file)
+        else:
+            st.warning(f"Format non supporté : {file.name}")
+            continue
 
-    if all_data:
-        save_data_to_excel(all_data, "parsed_resumes.xlsx")
-        with open("parsed_resumes.xlsx", "rb") as f:
-            st.download_button("Download Structured Excel", f, file_name="parsed_resumes.xlsx")
+        data = extract_resume_data(text)
+        data["filename"] = file.name
+        all_data.append(data)
+
+    df = pd.DataFrame(all_data)
+    st.dataframe(df)
+
+    csv = df.to_csv(index=False).encode("utf-8")
+    st.download_button("Télécharger les données en CSV", data=csv, file_name="parsed_resumes.csv", mime="text/csv")

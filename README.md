@@ -1,3 +1,3 @@
-# Phase 5: Resume Parsing to Structured Excel
+# Phase 5 - Structuration des Données de CV
 
-This Streamlit app parses PDF and DOCX resumes, extracts key information, and generates a structured Excel (.xlsx) file.
+Cette application Streamlit extrait les données structurées à partir de fichiers PDF et DOCX de CVs, et génère un fichier CSV avec les champs suivants : nom, email, téléphone, compétences, expérience, formation.
